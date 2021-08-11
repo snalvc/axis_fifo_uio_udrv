@@ -1,0 +1,1 @@
+cmake -DCMAKE_TOOLCHAIN_FILE=/home/snalvc/projects/pseudoT2/petalinux/crossc/arm-linux-gnueabihf.cmake -DCMAKE_BUILD_TYPE=Debug ..
