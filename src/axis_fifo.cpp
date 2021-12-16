@@ -136,29 +136,26 @@ void AXIS_FIFO::setup() {
                             "open()");
   }
   uint32_t size = this->p_uio->get_map(static_cast<uint32_t>(0))->size;
-  uint32_t offset = this->p_uio->get_map(static_cast<uint32_t>(0))->offset;
   this->reg_space = (uint32_t *)mmap(NULL, size, PROT_READ | PROT_WRITE,
-                                     MAP_SHARED, this->uio_fd, offset);
+                                     MAP_SHARED, this->uio_fd, 0);
   if (this->reg_space == MAP_FAILED) {
     throw std::system_error(std::error_code(errno, std::generic_category()),
                             "mmap()");
   }
   // AXI-Full exists
   if (this->p_uio->n_maps() > 1) {
-    int fd;
-    fd = open("/dev/mem", O_RDWR | O_SYNC);
-    if (fd < 0) {
-      throw std::system_error(std::error_code(errno, std::generic_category()),
-                              "open(\"/dev/mem\")");
-    }
     uint32_t addr = this->p_uio->get_map(static_cast<uint32_t>(1))->addr;
     uint32_t size = this->p_uio->get_map(static_cast<uint32_t>(1))->size;
-    this->axi_full_space = (uint32_t *)mmap(NULL, size, PROT_WRITE | PROT_READ,
-                                            MAP_SHARED, fd, addr);
+    this->axi_full_space =
+        (uint32_t *)mmap(NULL, size, PROT_WRITE | PROT_READ, MAP_SHARED,
+                         this->uio_fd, 1 * getpagesize());
     if (this->axi_full_space == MAP_FAILED) {
       throw std::system_error(std::error_code(errno, std::generic_category()),
                               "mmap()");
     }
+    this->read_addr = this->axi_full_space + 0x1000 / 4;
+  } else {
+    this->read_addr = this->reg_space + (RDFD_OFFSET / 4);
   }
 }
 
@@ -170,12 +167,6 @@ uint32_t &AXIS_FIFO::operator[](const uint32_t idx) {
   return *(reg_space + idx / 4);
 }
 
-uint32_t AXIS_FIFO::pop() {
-  if (this->axi_full_space != NULL) {
-    return *(this->axi_full_space + 0x1000 / 4);
-  } else {
-    return *(this->reg_space + (RDFD_OFFSET / 4));
-  }
-}
+uint32_t AXIS_FIFO::pop() { return *(this->read_addr); }
 
 } // namespace axis_fifo

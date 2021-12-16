@@ -101,6 +101,7 @@ private:
   int uio_fd = 0;
   uint32_t *reg_space = NULL;
   uint32_t *axi_full_space = NULL;
+  uint32_t *read_addr = NULL;
 
   void setup();
 };
